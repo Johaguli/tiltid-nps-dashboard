@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="sv">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=1920,initial-scale=1" />
+<title>Tiltid - NPS-oversikt</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="stage">
+  <div class="canvas">
+      <header>
+            <div class="left">
+                    <svg viewBox="0 0 193 66" xmlns="http://www.w3.org/2000/svg" class="logo-svg" style="height:38px;width:auto">
+                              <path d="M78.4702 44.3021V2.29297H63.3438V46.2294C63.3438 60.7047 71.9092 62.5455 79.9557 62.5455C82.403 62.5455 84.5027 62.2949 84.5027 62.2949V49.7423S83.6266 49.8243 82.6649 49.8243C79.2558 49.8243 78.4702 48.4027 78.4702 44.3021Z" fill="#09102C"/>
+                                        <path d="M140.057 2.28906H125.278V13.5841H140.057V2.28906Z" fill="#5779D1"/>
+                                                </svg>
+                                                        <h1>NPS-oversikt</h1>
+                                                              </div>
+                                                                    <div class="meta">Uppdaterad: <strong id="updated">-</strong></div>
+                                                                        </header>
+                                                                            <div class="total-block">
+                                                                                  <div class="total-label">Total NPS</div>
+                                                                                        <div id="total-num" class="total-num waiting">-</div>
+                                                                                              <div id="total-sub" class="total-sub">Laddar...</div>
+                                                                                                  </div>
+                                                                                                      <div id="grid" class="grid"></div>
+                                                                                                          <footer>Tiltid - data via Power Automate - auto-deploy via GitHub + Cloudflare Pages</footer>
+                                                                                                            </div>
+                                                                                                            </div>
+                                                                                                            <script>
+                                                                                                            function fmtNps(v) { if (v === null || v === undefined) return '-'; return v.toFixed(1).replace('.', ','); }
+                                                                                                            function deltaHtml(d) {
+                                                                                                              if (d === null || d === undefined) return '';
+                                                                                                                const arrow = d > 0 ? '+' : (d < 0 ? '-' : '=');
+                                                                                                                  const color = d > 0 ? '#059669' : (d < 0 ? '#dc2626' : '#6b7280');
+                                                                                                                    const sign = d > 0 ? '+' : '';
+                                                                                                                      const val = d.toFixed(1).replace('.', ',');
+                                                                                                                        return '<span class="delta" style="color:' + color + '">' + arrow + ' ' + sign + val + ' p</span>';
+                                                                                                                        }
+                                                                                                                        function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+                                                                                                                        function renderCard(sec) {
+                                                                                                                          const waiting = sec.waiting;
+                                                                                                                            const bigClass = waiting ? 'big waiting' : 'big';
+                                                                                                                              const subClass = waiting ? 'sub waiting' : 'sub';
+                                                                                                                                const periodClass = waiting ? 'period waiting' : 'period';
+                                                                                                                                  const rows = (sec.details || []).map(function(pair){ return '<div class="detail-row"><span class="dl">' + esc(pair[0]) + '</span><span class="dv">' + esc(pair[1]) + '</span></div>'; }).join('');
+                                                                                                                                    return '<div class="card" style="--acc:' + sec.accent + '"><div class="card-head"><span class="dot"></span><span class="label">' + esc(sec.label) + '</span><span class="' + periodClass + '">' + esc(sec.period) + '</span></div><div class="big-row"><div class="' + bigClass + '">' + fmtNps(sec.nps) + '</div>' + deltaHtml(sec.delta) + '</div><div class="' + subClass + '">' + esc(sec.sub || '') + '</div><div class="details">' + rows + '</div></div>';
+                                                                                                                                    }
+                                                                                                                                    function fitScale() {
+                                                                                                                                      const s = Math.min(window.innerWidth / 1920, window.innerHeight / 1080);
+                                                                                                                                        const c = document.querySelector('.canvas');
+                                                                                                                                          if (c) c.style.transform = 'scale(' + s + ')';
+                                                                                                                                          }
+                                                                                                                                          async function load() {
+                                                                                                                                            try {
+                                                                                                                                                const r = await fetch('data.json?t=' + Date.now());
+                                                                                                                                                    const data = await r.json();
+                                                                                                                                                        document.getElementById('updated').textContent = new Date(data.updated).toLocaleString('sv-SE', { dateStyle: 'short', timeStyle: 'short' });
+                                                                                                                                                            const secs = data.sections || [];
+                                                                                                                                                                const valid = secs.filter(function(s){ return s.nps !== null && s.nps !== undefined; });
+                                                                                                                                                                    const total = valid.length ? valid.reduce(function(a,b){ return a + b.nps; }, 0) / valid.length : null;
+                                                                                                                                                                        const totalNumEl = document.getElementById('total-num');
+                                                                                                                                                                            totalNumEl.textContent = fmtNps(total);
+                                                                                                                                                                                totalNumEl.className = total === null ? 'total-num waiting' : 'total-num';
+                                                                                                                                                                                    document.getElementById('total-sub').textContent = total === null ? 'Vantar pa data' : 'medel av ' + valid.length + ' sektion' + (valid.length === 1 ? '' : 'er');
+                                                                                                                                                                                        document.getElementById('grid').innerHTML = secs.map(renderCard).join('\n');
+                                                                                                                                                                                          } catch (e) { document.getElementById('total-sub').textContent = 'Kunde inte ladda data.json'; console.error(e); }
+                                                                                                                                                                                          }
+                                                                                                                                                                                          window.addEventListener('resize', fitScale);
+                                                                                                                                                                                          fitScale();
+                                                                                                                                                                                          load();
+                                                                                                                                                                                          setInterval(load, 10 * 60 * 1000);
+                                                                                                                                                                                          </script>
+                                                                                                                                                                                          </body>
+                                                                                                                                                                                          </html>
